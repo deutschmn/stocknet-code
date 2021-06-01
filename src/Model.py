@@ -107,14 +107,16 @@ class Model:
 
     def _build_placeholders(self):
         with tf.name_scope('placeholder'):
-            self.is_training_phase = tf.placeholder(dtype=tf.bool, shape=())
-            self.batch_size = tf.placeholder(dtype=tf.int32, shape=())
+            self.stock_ph = tf.placeholder(dtype=tf.int32, shape=[None])
+            
+            # FIXME make these params again
+            self.batch_size = 32 # tf.placeholder(dtype=tf.int32, shape=())
+            self.is_training_phase = True # tf.placeholder(dtype=tf.bool, shape=())
 
             # init
             self.word_table_init = tf.placeholder(dtype=tf.float32, shape=[vocab_size, self.word_embed_size])
 
             # model
-            self.stock_ph = tf.placeholder(dtype=tf.int32, shape=[None])
             self.T_ph = tf.placeholder(dtype=tf.int32, shape=[None, ])
             self.n_words_ph = tf.placeholder(dtype=tf.int32, shape=[None, self.max_n_days, self.max_n_msgs])
             self.n_msgs_ph = tf.placeholder(dtype=tf.int32, shape=[None, self.max_n_days])

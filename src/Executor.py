@@ -5,6 +5,7 @@ import metrics as metrics
 import stat_logger as stat_logger
 from DataPipe import DataPipe
 from ConfigLoader import logger
+import shap
 
 
 class Executor:
@@ -38,9 +39,10 @@ class Executor:
             train_batch_dict = next(train_batch_gen)
 
             while n_iter < 100:
-                feed_dict = {self.model.is_training_phase: True,
-                             self.model.batch_size: train_batch_dict['batch_size'],
+                feed_dict = {
                              self.model.stock_ph: train_batch_dict['stock_batch'],
+                             # self.model.batch_size: train_batch_dict['batch_size'],
+                             # self.model.is_training_phase: True,
                              self.model.T_ph: train_batch_dict['T_batch'],
                              self.model.n_words_ph: train_batch_dict['n_words_batch'],
                              self.model.n_msgs_ph: train_batch_dict['n_msgs_batch'],
@@ -73,9 +75,10 @@ class Executor:
 
         for gen_batch_dict in generation_gen:
 
-            feed_dict = {self.model.is_training_phase: False,
-                         self.model.batch_size: gen_batch_dict['batch_size'],
+            feed_dict = {
                          self.model.stock_ph: gen_batch_dict['stock_batch'],
+                         # self.model.batch_size: gen_batch_dict['batch_size'],
+                         # self.model.is_training_phase: False,
                          self.model.T_ph: gen_batch_dict['T_batch'],
                          self.model.n_words_ph: gen_batch_dict['n_words_batch'],
                          self.model.n_msgs_ph: gen_batch_dict['n_msgs_batch'],
@@ -149,14 +152,15 @@ class Executor:
 
                     # logger.info('train: batch_size: {0}'.format(train_batch_dict['batch_size']))
 
-                    feed_dict = {self.model.is_training_phase: True,
-                                 self.model.batch_size: train_batch_dict['batch_size'],
+                    feed_dict = {
                                  self.model.stock_ph: train_batch_dict['stock_batch'],
+                                 # self.model.batch_size: train_batch_dict['batch_size'],
+                                 # self.model.is_training_phase: True,
                                  self.model.T_ph: train_batch_dict['T_batch'],
                                  self.model.n_words_ph: train_batch_dict['n_words_batch'],
                                  self.model.n_msgs_ph: train_batch_dict['n_msgs_batch'],
-                                 self.model.y_ph: train_batch_dict['y_batch'],
-                                 self.model.price_ph: train_batch_dict['price_batch'],
+                                 self.model.y_ph: train_batch_dict['y_batch'], # !!!
+                                 self.model.price_ph: train_batch_dict['price_batch'], # !!!
                                  self.model.mv_percent_ph: train_batch_dict['mv_percent_batch'],
                                  self.model.word_ph: train_batch_dict['word_batch'],
                                  self.model.ss_index_ph: train_batch_dict['ss_index_batch'],
@@ -165,6 +169,20 @@ class Executor:
                     ops = [self.model.y_T, self.model.y_T_, self.model.loss, self.model.optimize,
                            self.model.global_step]
                     train_batch_y, train_batch_y_, train_batch_loss, _, n_iter = sess.run(ops, feed_dict)
+
+                    model_inputs = list(feed_dict.keys())
+                    batch_values = list(feed_dict.values())
+                    background_dist = batch_values # TODO use properly sampled background
+
+                    # e = shap.GradientExplainer((model_inputs, self.model.y_T), background_dist)
+                    e = shap.DeepExplainer((model_inputs, self.model.y_T), background_dist)
+
+                    # sample_idx = 17
+                    # sample = list(map(lambda x: x[sample_idx], batch_values))
+
+                    # e.shap_values(sample) # TODO use only one sample
+                    # FIXME: doesn't work, error in TF gradient computation
+                    e.shap_values(batch_values)
 
                     # training batch stat
                     epoch_size += float(train_batch_dict['batch_size'])
