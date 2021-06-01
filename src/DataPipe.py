@@ -415,7 +415,7 @@ class DataPipe:
                     if generators:
                         continue
                     else:
-                        raise StopIteration
+                        return
 
             batch_dict = {
                 # meta
